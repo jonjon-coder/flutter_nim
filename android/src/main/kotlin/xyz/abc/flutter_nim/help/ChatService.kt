@@ -1,29 +1,30 @@
 package xyz.abc.flutter_nim.help
 
+import android.util.Log
 import com.netease.nimlib.sdk.NIMSDK
 import com.netease.nimlib.sdk.RequestCallbackWrapper
 import com.netease.nimlib.sdk.msg.MessageBuilder
 import com.netease.nimlib.sdk.msg.MsgService.MSG_CHATTING_ACCOUNT_NONE
 import com.netease.nimlib.sdk.msg.constant.SessionTypeEnum
 import com.netease.nimlib.sdk.msg.model.IMMessage
-import io.flutter.plugin.common.EventChannel
+import io.flutter.plugin.common.EventChannel.EventSink
 import java.io.File
 
-class ChatService constructor(private val sessionId: String, private val eventSink: EventChannel.EventSink) {
+class ChatService constructor(private val sessionId: String, private val eventSink: Array<EventSink?>) {
     private val msgService = NIMSDK.getMsgService()
-    private val data = mutableMapOf<String, IMMessage>()
+    private val chatMsg = mutableMapOf<String, IMMessage>()
 
     init {
         msgService
                 .pullMessageHistory(MessageBuilder.createEmptyMessage(sessionId, SessionTypeEnum.P2P, 0), 40, true)
                 .setCallback(object : RequestCallbackWrapper<List<IMMessage>?>() {
                     override fun onResult(code: Int, result: List<IMMessage>?, exception: Throwable?) {
-                        result?.apply {
+                        result?.reversed()?.apply {
                             forEach {
-                                data[it.uuid] = it
+                                chatMsg[it.uuid] = it
                             }
 
-                            eventSink.success(NIMSessionParser.handleMessages(this))
+                            pushMsg2Flutter()
                         }
                     }
                 })
@@ -36,11 +37,23 @@ class ChatService constructor(private val sessionId: String, private val eventSi
     }
 
     fun observeMsgStatus(msg: IMMessage) {
-        if (data.containsKey(msg.uuid)) {
-            data[msg.uuid] = msg
+        if (chatMsg.containsKey(msg.uuid)) {
+            chatMsg[msg.uuid] = msg
 
-            eventSink.success(NIMSessionParser.handleMessages(data.values.toList()))
+            pushMsg2Flutter()
         }
+    }
+
+    fun onMessageIncoming(list: List<IMMessage>) {
+        var b = false
+
+        list.filter { it.sessionId == sessionId }.forEach {
+            chatMsg[it.uuid] = it
+
+            b = true
+        }
+
+        if (b) pushMsg2Flutter()
     }
 
     fun sendTextMessage(text: String) {
@@ -63,26 +76,28 @@ class ChatService constructor(private val sessionId: String, private val eventSi
         sendMsg(msg)
     }
 
-    fun sendVideoMessage(path: String) {
-
-    }
-
-    fun sendAudioMessage(path: String) {
+    fun sendAudioMessage(audio: Pair<File, Long>) {
         val msg = MessageBuilder.createAudioMessage(
                 sessionId,
                 SessionTypeEnum.P2P,
-                File(path),
-                0
+                audio.first,
+                audio.second
         )
 
         sendMsg(msg)
     }
 
     private fun sendMsg(msg: IMMessage) {
+        Log.d("ChatService", "发送消息 ${msg.msgType} # ${msg.uuid}")
+
         msgService.sendMessage(msg, false)
 
-        data[msg.uuid] = msg
+        chatMsg[msg.uuid] = msg
 
-        eventSink.success(NIMSessionParser.handleMessages(data.values.toList()))
+        pushMsg2Flutter()
+    }
+
+    private fun pushMsg2Flutter() {
+        eventSink[0]?.success(DataParser.handleMessages(chatMsg.values.toList()))
     }
 }

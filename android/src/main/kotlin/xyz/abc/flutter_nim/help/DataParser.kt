@@ -1,6 +1,6 @@
 package xyz.abc.flutter_nim.help
 
-import com.netease.nimlib.sdk.NIMClient
+import com.netease.nimlib.sdk.NIMSDK
 import com.netease.nimlib.sdk.msg.attachment.AudioAttachment
 import com.netease.nimlib.sdk.msg.attachment.ImageAttachment
 import com.netease.nimlib.sdk.msg.attachment.MsgAttachment
@@ -11,12 +11,11 @@ import com.netease.nimlib.sdk.msg.constant.MsgStatusEnum
 import com.netease.nimlib.sdk.msg.constant.MsgTypeEnum
 import com.netease.nimlib.sdk.msg.model.IMMessage
 import com.netease.nimlib.sdk.msg.model.RecentContact
-import com.netease.nimlib.sdk.uinfo.UserService
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-object NIMSessionParser {
+object DataParser {
     // 处理最近会话数据
     fun handleRecentSessionsData(recents: List<RecentContact>?): String {
         var result = ""
@@ -45,8 +44,10 @@ object NIMSessionParser {
 
                     if (recent.msgType == MsgTypeEnum.custom) {
                         val customAttachment: MsgAttachment? = recent.attachment
-                        lastMessageObject.put("customMessageContent", customAttachment?.toJson(false)
-                                ?: "")
+                        lastMessageObject.put(
+                                "customMessageContent",
+                                customAttachment?.toJson(false) ?: ""
+                        )
                     }
 
                     when (recent.msgStatus) {
@@ -60,7 +61,7 @@ object NIMSessionParser {
 
                     // 用户信息
                     val userObject = JSONObject()
-                    val userInfo = NIMClient.getService(UserService::class.java).getUserInfo(contactId)
+                    val userInfo = NIMSDK.getUserService().getUserInfo(contactId)
                     if (userInfo != null) {
                         userObject.put("nickname", userInfo.name)
                         userObject.put("avatarUrl", userInfo.avatar)

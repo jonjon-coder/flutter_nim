@@ -1,5 +1,6 @@
 package xyz.abc.flutter_nim
 
+import android.util.Log
 import androidx.annotation.NonNull
 import com.netease.nimlib.sdk.InvocationFuture
 import com.netease.nimlib.sdk.NIMSDK
@@ -13,8 +14,9 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import xyz.abc.flutter_nim.help.AudioService
 import xyz.abc.flutter_nim.help.ChatService
-import xyz.abc.flutter_nim.help.NIMSessionParser
+import xyz.abc.flutter_nim.help.SessionService
 
 /** FlutterNimPlugin */
 class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
@@ -43,11 +45,13 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
         private const val METHOD_IM_RECORD_CANCEL = "onCancelRecording"
     }
 
-    private var eventSink: EventSink? = null
-    private var chatService: ChatService? = null
+    private val eventSink = arrayOfNulls<EventSink?>(1)
+    private val chatService = arrayOfNulls<ChatService?>(1)
+    private val sessionService = SessionService(eventSink)
 
     private lateinit var methodChannel: MethodChannel
     private lateinit var eventChannel: EventChannel
+    private lateinit var audioService: AudioService
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         methodChannel = MethodChannel(flutterPluginBinding.binaryMessenger, METHOD_CHANNEL_NAME)
@@ -55,6 +59,8 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
 
         methodChannel.setMethodCallHandler(this)
         eventChannel.setStreamHandler(this)
+
+        audioService = AudioService(flutterPluginBinding.applicationContext)
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
@@ -64,8 +70,28 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
             METHOD_IM_INIT -> {
-                NIMSDK.getMsgServiceObserve()
-                        .observeMsgStatus({ chatService?.observeMsgStatus(it) }, true)
+                NIMSDK.getMsgServiceObserve().apply {
+                    // 消息状态改变
+                    observeMsgStatus({
+                        Log.d("observeMsgStatus", "${it.uuid}#${it.status}")
+
+                        chatService[0]?.observeMsgStatus(it)
+                    }, true)
+
+                    // 新消息
+                    observeReceiveMessage({
+                        Log.d("observeReceiveMessage", "${it.size}")
+
+                        chatService[0]?.onMessageIncoming(it)
+                    }, true)
+
+                    // 最新联系人
+                    observeRecentContact({
+                        Log.d("observeRecentContact", "${it.size}")
+
+                        sessionService.onRecentContact(it)
+                    }, true)
+                }
 
                 result.success(true)
             }
@@ -82,94 +108,68 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
                 result.success(true)
             }
             METHOD_IM_RECENT_SESSIONS -> {
-                NIMSDK.getMsgService()
-                        .queryRecentContacts()
-                        .then(result) { NIMSessionParser.handleRecentSessionsData(it) }
+                sessionService.queryRecentContacts()
+
+                result.success(true)
             }
-//            METHOD_IM_DELETE_RECENT_SESSION -> {
-//                val deletedSessionId: String? = call.argument("sessionId")
-//                recentSessionsInteractor.deleteRecentContact2(deletedSessionId)
-//            }
             METHOD_IM_START_CHAT -> {
-                chatService = ChatService(call.argument("sessionId")!!, eventSink!!)
+                chatService[0] = ChatService(call.argument("sessionId")!!, eventSink)
 
                 result.success(true)
             }
             METHOD_IM_EXIT_CHAT -> {
-                chatService!!.onDestroy()
-                chatService = null
+                chatService[0]!!.onDestroy()
+                chatService[0] = null
 
                 result.success(true)
             }
-//            METHOD_IM_MESSAGES -> {
-//                val messageIndex: Int? = call.argument("messageIndex")
-//                sessionInteractor.loadHistoryMessages(messageIndex)
-//            }
+            METHOD_IM_MESSAGES -> {
+                val messageIndex: Int? = call.argument("messageIndex")
+
+                result.success(true)
+            }
             METHOD_IM_SEND_TEXT -> {
-                chatService!!.sendTextMessage(call.argument("text")!!)
+                chatService[0]!!.sendTextMessage(call.argument("text")!!)
 
                 result.success(true)
             }
             METHOD_IM_SEND_IMAGE -> {
-                chatService!!.sendImageMessage(call.argument("imagePath")!!)
+                chatService[0]!!.sendImageMessage(call.argument("imagePath")!!)
 
                 result.success(true)
             }
-            METHOD_IM_SEND_VIDEO -> {
-                chatService!!.sendVideoMessage(call.argument("videoPath")!!)
+            METHOD_IM_RECORD_START -> {
+                audioService.start()
 
                 result.success(true)
             }
-            METHOD_IM_SEND_AUDIO -> {
-                chatService!!.sendAudioMessage(call.argument("audioPath")!!)
+            METHOD_IM_RECORD_CANCEL -> {
+                audioService.cancel()
 
                 result.success(true)
             }
-//            METHOD_IM_SEND_CUSTOM -> {
-//                val customEncodeString: String? = call.argument("customEncodeString")
-//                val apnsContent: String? = call.argument("apnsContent")
-//                if (sessionInteractor != null) {
-//                    sessionInteractor.sendCustomMessage(customEncodeString, apnsContent)
-//                }
-//            }
-//            METHOD_IM_SEND_CUSTOM_2 -> {
-//                val sessionId2: String? = call.argument("sessionId")
-//                val customEncodeString2: String? = call.argument("customEncodeString")
-//                val apnsContent2: String? = call.argument("apnsContent")
-//                NIMSessionInteractor.sendCustomMessageToSession(sessionId2, customEncodeString2, apnsContent2)
-//                result.success(true)
-//            }
-//            METHOD_IM_RESEND_MESSAGE -> {
-//                val messageId: String? = call.argument("messageId")
-//                if (sessionInteractor != null) {
-//                    sessionInteractor.resendMessage(messageId)
-//                }
-//            }
-//            METHOD_IM_MARK_READ -> {
-//                val audioMessageId: String? = call.argument("messageId")
-//                if (sessionInteractor != null) {
-//                    sessionInteractor.markAudioMessageRead(audioMessageId)
-//                    result.success(true)
-//                }
-//            }
-//            METHOD_IM_RECORD_START -> if (sessionInteractor != null) {
-//                sessionInteractor.onStartRecording()
-//            }
-//            METHOD_IM_RECORD_STOP -> if (sessionInteractor != null) {
-//                sessionInteractor.onStopRecording()
-//            }
-//            METHOD_IM_RECORD_CANCEL -> if (sessionInteractor != null) {
-//                sessionInteractor.onCancelRecording()
-//            }
+            METHOD_IM_RECORD_STOP -> {
+                val audio = audioService.stop()
+
+                audio?.apply {
+                    if (audio.second > 1000) {
+                        chatService[0]!!.sendAudioMessage(audio)
+                    } else {
+                        Log.d("", "录音时间小于1秒，忽略发送")
+                    }
+                }
+
+                result.success(true)
+            }
         }
     }
 
     override fun onListen(arguments: Any?, events: EventSink?) {
-        eventSink = events
+        eventSink[0] = events
     }
 
     override fun onCancel(arguments: Any?) {
-        eventSink = null
+        eventSink[0] = null
     }
 
     private fun <T, R> InvocationFuture<T>.then(result: Result, block: (T) -> R) = setCallback(Callback<T, R>(result, block))
