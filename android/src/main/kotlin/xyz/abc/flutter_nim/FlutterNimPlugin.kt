@@ -16,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import xyz.abc.flutter_nim.help.AudioService
 import xyz.abc.flutter_nim.help.ChatService
+import xyz.abc.flutter_nim.help.JsonAttachment
 import xyz.abc.flutter_nim.help.SessionService
 
 /** FlutterNimPlugin */
@@ -91,6 +92,10 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
 
                         sessionService.onRecentContact(it)
                     }, true)
+                }
+
+                NIMSDK.getMsgService().apply {
+                    registerCustomAttachmentParser { JsonAttachment(it) }
                 }
 
                 result.success(true)

@@ -3,7 +3,6 @@ package xyz.abc.flutter_nim.help
 import com.netease.nimlib.sdk.NIMSDK
 import com.netease.nimlib.sdk.msg.attachment.AudioAttachment
 import com.netease.nimlib.sdk.msg.attachment.ImageAttachment
-import com.netease.nimlib.sdk.msg.attachment.MsgAttachment
 import com.netease.nimlib.sdk.msg.attachment.VideoAttachment
 import com.netease.nimlib.sdk.msg.constant.AttachStatusEnum
 import com.netease.nimlib.sdk.msg.constant.MsgDirectionEnum
@@ -43,7 +42,8 @@ object DataParser {
                     lastMessageObject.put("timestamp", recent.time)
 
                     if (recent.msgType == MsgTypeEnum.custom) {
-                        val customAttachment: MsgAttachment? = recent.attachment
+                        val customAttachment = recent.attachment as? JsonAttachment
+
                         lastMessageObject.put(
                                 "customMessageContent",
                                 customAttachment?.toJson(false) ?: ""
@@ -166,8 +166,12 @@ object DataParser {
                     json.put("messageObject", video)
                 }
                 MsgTypeEnum.custom -> {
-                    val customAttachment: MsgAttachment? = message.attachment
-                    json.put("customMessageContent", customAttachment?.toJson(false) ?: "")
+                    val customAttachment = message.attachment as? JsonAttachment
+
+                    json.put(
+                            "customMessageContent",
+                            customAttachment?.toJson(false) ?: ""
+                    )
                 }
                 else -> {
                 }
