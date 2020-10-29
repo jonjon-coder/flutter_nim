@@ -15,7 +15,7 @@ A new Flutter plugin for netease im.
   s.source_files = 'Classes/**/*'
   s.public_header_files = 'Classes/**/*.h'
   s.dependency 'Flutter'
-  s.dependency 'NIMSDK', '7.0.3'
+  s.dependency 'NIMSDK_LITE', '8.0.1'
 
   s.ios.deployment_target = '9.0'
 end
