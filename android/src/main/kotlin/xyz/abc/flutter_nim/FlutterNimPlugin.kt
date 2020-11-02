@@ -1,5 +1,7 @@
 package xyz.abc.flutter_nim
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.annotation.NonNull
 import com.netease.nimlib.sdk.InvocationFuture
@@ -18,6 +20,7 @@ import xyz.abc.flutter_nim.help.AudioService
 import xyz.abc.flutter_nim.help.ChatService
 import xyz.abc.flutter_nim.help.JsonAttachment
 import xyz.abc.flutter_nim.help.SessionService
+import kotlin.concurrent.thread
 
 /** FlutterNimPlugin */
 class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
@@ -154,13 +157,17 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
                 result.success(true)
             }
             METHOD_IM_RECORD_STOP -> {
-                val audio = audioService.stop()
+                thread {
+                    val audio = audioService.stop()
 
-                audio?.apply {
-                    if (audio.second > 1000) {
-                        chatService[0]!!.sendAudioMessage(audio)
-                    } else {
-                        Log.d("", "录音时间小于1秒，忽略发送")
+                    audio?.apply {
+                        if (audio.second > 1000) {
+                            Handler(Looper.getMainLooper()).post {
+                                chatService[0]!!.sendAudioMessage(audio)
+                            }
+                        } else {
+                            Log.d("", "录音时间小于1秒，忽略发送")
+                        }
                     }
                 }
 
