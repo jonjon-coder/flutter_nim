@@ -43,7 +43,8 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
         private const val METHOD_IM_SEND_CUSTOM = "imSendCustom"
         private const val METHOD_IM_SEND_CUSTOM_2 = "imSendCustomToSession"
         private const val METHOD_IM_RESEND_MESSAGE = "imResendMessage"
-        private const val METHOD_IM_MARK_READ = "imMarkAudioMessageRead"
+        private const val METHOD_IM_MARK_AUDIO_READ = "imMarkAudioMessageRead"
+        private const val METHOD_IM_MARK_ALL_READ = "imMarkAllMessageRead"
         private const val METHOD_IM_RECORD_START = "onStartRecording"
         private const val METHOD_IM_RECORD_STOP = "onStopRecording"
         private const val METHOD_IM_RECORD_CANCEL = "onCancelRecording"
@@ -143,6 +144,12 @@ class FlutterNimPlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHa
             }
             METHOD_IM_SEND_IMAGE -> {
                 chatService[0]!!.sendImageMessage(call.argument("imagePath")!!)
+
+                result.success(true)
+            }
+            METHOD_IM_MARK_ALL_READ -> {
+                NIMSDK.getMsgService()
+                        .clearAllUnreadCount();
 
                 result.success(true)
             }

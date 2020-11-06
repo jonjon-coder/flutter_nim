@@ -272,6 +272,11 @@ class FlutterNIM {
     await _methodChannel.invokeMethod("imMarkAudioMessageRead", map);
   }
 
+  /// 标记所有已读
+  Future<void> markAllMessageRead() async {
+    await _methodChannel.invokeMethod("imMarkAllMessageRead");
+  }
+
   //////////////
 
   // 解析最近会话 JSON
