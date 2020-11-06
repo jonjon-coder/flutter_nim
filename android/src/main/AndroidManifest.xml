@@ -1,3 +1,19 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
   package="xyz.abc.flutter_nim">
+    <!-- 8.0+系统需要-->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- 下面的 uses-permission 一起加入到你的 AndroidManifest 文件中。 -->
+    <permission
+        android:name="${applicationId}.permission.RECEIVE_MSG"
+        android:protectionLevel="signature"/>
+
+    <application>
+        <!-- 云信进程间通信provider -->
+        <provider
+            android:name="com.netease.nimlib.ipc.NIMContentProvider"
+            android:authorities="${applicationId}.ipc.provider"
+            android:exported="false"
+            android:process=":core" />
+    </application>
 </manifest>
