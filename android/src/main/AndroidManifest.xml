@@ -7,7 +7,9 @@
     <permission
         android:name="${applicationId}.permission.RECEIVE_MSG"
         android:protectionLevel="signature"/>
-
+  
+    <uses-permission android:name="${applicationId}.permission.RECEIVE_MSG"/>
+  
     <application>
         <!-- 云信进程间通信provider -->
         <provider
