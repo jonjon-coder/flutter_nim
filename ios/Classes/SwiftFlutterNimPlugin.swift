@@ -49,6 +49,7 @@ enum FlutterChannel: String {
     case imSendCustomToSession
     case imResendMessage
     case imMarkAudioMessageRead
+    case imMarkAllMessageRead
     case onStartRecording
     case onStopRecording
     case onCancelRecording
@@ -107,6 +108,9 @@ public class SwiftFlutterNIMPlugin: NSObject, FlutterPlugin {
             imResendMessage(arguments: call.arguments)
         case FlutterChannel.imMarkAudioMessageRead.rawValue:
             imMarkAudioMessageRead(arguments: call.arguments)
+        case FlutterChannel.imMarkAllMessageRead.rawValue:
+            NIMSDK.shared().conversationManager.markAllMessagesRead()
+            result(true)
         case FlutterChannel.onStartRecording.rawValue:
             sessionInteractor?.onStartRecording()
         case FlutterChannel.onStopRecording.rawValue:
