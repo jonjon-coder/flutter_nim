@@ -1,5 +1,6 @@
 package xyz.abc.flutter_nim.help
 
+import android.util.Log
 import com.netease.nimlib.sdk.NIMSDK
 import com.netease.nimlib.sdk.RequestCallbackWrapper
 import com.netease.nimlib.sdk.ResponseCode.RES_SUCCESS
@@ -9,6 +10,8 @@ import io.flutter.plugin.common.EventChannel
 
 class SessionService constructor(private val eventSink: Array<EventChannel.EventSink?>) {
     private val msgService = NIMSDK.getMsgService()
+    private val userService = NIMSDK.getUserService()
+
     private val contact = mutableListOf<RecentContact>()
 
     fun queryRecentContacts() {
@@ -46,8 +49,8 @@ class SessionService constructor(private val eventSink: Array<EventChannel.Event
     }
 
     private fun refashUserInfo(data: List<RecentContact>) {
-        data.map { it.fromAccount }.toMutableList().apply {
-            val items = NIMSDK.getUserService().getUserInfoList(this)
+        data.map { it.contactId }.toMutableList().apply {
+            val items = userService.getUserInfoList(this)
 
             if (items == null) {
                 fetchUserInfo(this)
@@ -60,6 +63,8 @@ class SessionService constructor(private val eventSink: Array<EventChannel.Event
     }
 
     private fun fetchUserInfo(accounts: List<String>) {
+        Log.i("fetchUserInfo", "ids => $accounts")
+
         NIMSDK.getUserService()
                 .fetchUserInfo(accounts)
                 .setCallback(object : RequestCallbackWrapper<List<NimUserInfo>>() {

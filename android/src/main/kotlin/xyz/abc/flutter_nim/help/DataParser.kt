@@ -15,6 +15,8 @@ import org.json.JSONException
 import org.json.JSONObject
 
 object DataParser {
+    private val userService = NIMSDK.getUserService()
+
     // 处理最近会话数据
     fun handleRecentSessionsData(recents: List<RecentContact>?): String {
         var result = ""
@@ -61,7 +63,7 @@ object DataParser {
 
                     // 用户信息
                     val userObject = JSONObject()
-                    val userInfo = NIMSDK.getUserService().getUserInfo(contactId)
+                    val userInfo = userService.getUserInfo(contactId)
                     if (userInfo != null) {
                         userObject.put("nickname", userInfo.name)
                         userObject.put("avatarUrl", userInfo.avatar)
